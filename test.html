@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Explorer Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .code {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .step {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>JavaScript Explorer Chrome Extension</h1>
+    
+    <div class="container">
+        <h2>🚀 Installation Instructions</h2>
+        
+        <div class="step">
+            <h3>Step 1: Load the Extension</h3>
+            <ol>
+                <li>Open Chrome and navigate to <code>chrome://extensions/</code></li>
+                <li>Enable "Developer mode" in the top right corner</li>
+                <li>Click "Load unpacked" and select the extension directory</li>
+                <li>The extension will appear in your extensions list</li>
+            </ol>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Open DevTools</h3>
+            <ol>
+                <li>Right-click on this page and select "Inspect" (or press F12)</li>
+                <li>Look for the "JS Explorer" tab in the DevTools panel</li>
+                <li>Click on the "JS Explorer" tab to open the extension</li>
+            </ol>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Explore JavaScript Objects</h3>
+            <ul>
+                <li><strong>Navigate the tree:</strong> Click on folders in the left pane to expand them</li>
+                <li><strong>View properties:</strong> Select items to see their properties in the right pane</li>
+                <li><strong>Use search:</strong> Type expressions like <code>document.body</code> in the search box</li>
+                <li><strong>Context menu:</strong> Right-click on items for additional actions</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>🧪 Test Objects</h2>
+        <p>This page creates some test objects you can explore with the JavaScript Explorer:</p>
+        
+        <div class="code">
+            <strong>Global test objects created:</strong><br>
+            • <code>window.testObject</code> - A complex nested object<br>
+            • <code>window.testArray</code> - An array with mixed content<br>
+            • <code>window.testFunction</code> - A function with properties<br>
+            • <code>window.testClass</code> - A class instance
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>✨ Features to Try</h2>
+        
+        <h3>Address Bar Navigation</h3>
+        <p>The address bar shows your current location and supports breadcrumb navigation:</p>
+        <div class="code">Current Path: window.document.body</div>
+        
+        <h3>Auto-completion Search</h3>
+        <p>Try typing these expressions in the search box:</p>
+        <div class="code">
+            window.loc<br>
+            document.body.chil<br>
+            testObject.nested<br>
+            Array.prototype
+        </div>
+        
+        <h3>Context Menu Actions</h3>
+        <p>Right-click on any item in the tree to:</p>
+        <ul>
+            <li>Inspect in Console - Logs the object to the browser console</li>
+            <li>Copy Path - Copies the JavaScript path to clipboard</li>
+            <li>View Source - Shows function source code</li>
+            <li>Highlight Element - Highlights DOM elements on the page</li>
+        </ul>
+    </div>
+    
+    <div class="warning">
+        <h3>⚠️ Note</h3>
+        <p>If you don't see the "JS Explorer" tab in DevTools, make sure:</p>
+        <ul>
+            <li>The extension is properly loaded and enabled</li>
+            <li>You've refreshed this page after installing the extension</li>
+            <li>DevTools is fully loaded (try closing and reopening it)</li>
+        </ul>
+    </div>
+    
+    <div id="testElement" class="container" style="border: 2px solid #007acc;">
+        <h2>🎯 Test Element</h2>
+        <p>This is a test DOM element you can explore. Try navigating to <code>document.getElementById('testElement')</code></p>
+    </div>
+    
+    <script>
+        // Create test objects for exploration
+        window.testObject = {
+            name: 'Test Object',
+            nested: {
+                level1: {
+                    level2: {
+                        value: 'Deep nested value',
+                        array: [1, 2, 3, 'string', { key: 'value' }]
+                    }
+                }
+            },
+            methods: {
+                testMethod: function() {
+                    return 'This is a test method';
+                },
+                arrowFunction: () => 'Arrow function result'
+            },
+            primitives: {
+                string: 'Hello World',
+                number: 42,
+                boolean: true,
+                nullValue: null,
+                undefinedValue: undefined
+            }
+        };
+        
+        window.testArray = [
+            'First item',
+            { type: 'object', value: 123 },
+            [1, 2, 3],
+            function namedFunction() { return 'function in array'; },
+            new Date(),
+            /regex-pattern/gi
+        ];
+        
+        window.testFunction = function testFunction(param1, param2) {
+            return param1 + param2;
+        };
+        
+        // Add properties to the function
+        window.testFunction.customProperty = 'Functions can have properties too!';
+        window.testFunction.nestedObject = { key: 'value' };
+        
+        // Create a class instance
+        class TestClass {
+            constructor() {
+                this.instanceProperty = 'Instance property value';
+                this.instanceMethod = function() {
+                    return 'Instance method result';
+                };
+            }
+            
+            classMethod() {
+                return 'Class method result';
+            }
+            
+            static staticMethod() {
+                return 'Static method result';
+            }
+        }
+        
+        window.testClass = new TestClass();
+        
+        // Add some dynamic properties
+        window.dynamicObject = {};
+        Object.defineProperty(window.dynamicObject, 'getter', {
+            get: function() { return 'This is a getter'; },
+            enumerable: true
+        });
+        
+        Object.defineProperty(window.dynamicObject, 'setter', {
+            set: function(value) { this._value = value; },
+            get: function() { return this._value; },
+            enumerable: true
+        });
+        
+        console.log('Test objects created successfully!');
+        console.log('Open DevTools and look for the "JS Explorer" tab to start exploring!');
+    </script>
+</body>
+</html>

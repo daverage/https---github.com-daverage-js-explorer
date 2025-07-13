@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>JavaScript Explorer Panel</title>
+    <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+    <div class="js-explorer">
+        <!-- Address Display Component -->
+        <div class="address-display">
+            <label class="address-label">Current Path:</label>
+            <div class="address-path" id="addressPath">window</div>
+        </div>
+        
+        <!-- Navigation Input Component -->
+        <div class="navigation-input-container">
+            <input 
+                type="text" 
+                id="navigationInput" 
+                class="navigation-input" 
+                placeholder="Navigate to JavaScript expression (e.g., window.location, document.body)"
+                autocomplete="off"
+            >
+            <button id="goButton" class="go-button">Go</button>
+            <div id="suggestions" class="suggestions-dropdown"></div>
+        </div>
+        
+        <!-- Global Search Component -->
+        <div class="global-search-container">
+            <div class="search-header">
+                <input 
+                    type="text" 
+                    id="globalSearchInput" 
+                    class="global-search-input" 
+                    placeholder="Global search with wildcards (* ? AND OR) - e.g., *Element* AND visible"
+                    autocomplete="off"
+                >
+                <button id="searchButton" class="search-button">Search</button>
+                <select id="searchScope" class="search-scope">
+                    <option value="current">Current Object</option>
+                    <option value="global">Global Scope</option>
+                    <option value="dom">DOM Tree</option>
+                </select>
+            </div>
+            <div id="searchResults" class="search-results"></div>
+        </div>
+        
+        <!-- Two-Pane Navigation Interface -->
+        <div class="main-container">
+            <!-- Left Pane: Navigation Tree -->
+            <div class="left-pane">
+                <div class="tree-container">
+                    <div id="navigationTree" class="navigation-tree"></div>
+                </div>
+            </div>
+            
+            <!-- Resizer -->
+            <div class="resizer" id="resizer"></div>
+            
+            <!-- Right Pane: Content View -->
+            <div class="right-pane">
+                <div class="content-header">
+                    <h3 id="contentTitle">Properties</h3>
+                </div>
+                <div class="content-container">
+                    <div id="contentView" class="content-view">
+                        <div class="loading-message">Select an item from the navigation tree to view its properties</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Context Menu -->
+        <div id="contextMenu" class="context-menu">
+            <div class="context-menu-item" data-action="inspect">Inspect in Console</div>
+            <div class="context-menu-item" data-action="copy">Copy Path</div>
+            <div class="context-menu-item" data-action="copyValue">Copy Value</div>
+            <div class="context-menu-item" data-action="source">View Source</div>
+            <div class="context-menu-item" data-action="highlight">Highlight Element</div>
+        </div>
+    </div>
+    
+    <script type="module" src="panel.js"></script>
+</body>
+</html>
