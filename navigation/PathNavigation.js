@@ -56,7 +56,7 @@ export class PathNavigation {
                 this.explorer.showError('Expression not found or undefined: ' + expression);
             }
         } catch (error) {
-            this.explorer.showError('Invalid expression: ' + this.explorer.errorHandler.formatInspectorError(error));
+            throw error; // Re-throw the original error for more specific reporting
         }
     }
     

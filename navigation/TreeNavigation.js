@@ -1,43 +1,113 @@
 /**
  * Tree Navigation Module
- * Handles the left-side tree navigation functionality
+ * Handles the hierarchical tree view of JavaScript objects
+ * Enhanced with optimized property preview generation and virtual scrolling
  */
+
+import { PropertyPreviewUtils } from '../utils/PropertyPreviewUtils.js';
+import { PathUtils } from '../utils/PathUtils.js';
+
 
 export class TreeNavigation {
     constructor(explorer) {
         this.explorer = explorer;
+        this.expandedNodes = new Set();
+        this.nodeCache = new Map();
+        this.virtualScrollEnabled = false;
+        this.visibleNodes = [];
+        this.scrollTop = 0;
+        this.nodeHeight = 24;
+        this.containerHeight = 0;
     }
     
     async loadRootNodes() {
-        const rootNodes = [
-            { name: 'window', type: 'object', path: 'window', hasChildren: true },
-            { name: 'document', type: 'object', path: 'document', hasChildren: true },
-            { name: 'localStorage', type: 'object', path: 'localStorage', hasChildren: true },
-            { name: 'sessionStorage', type: 'object', path: 'sessionStorage', hasChildren: true },
-            { name: 'console', type: 'object', path: 'console', hasChildren: true },
-            { name: 'performance', type: 'object', path: 'performance', hasChildren: true },
-            { name: 'navigator', type: 'object', path: 'navigator', hasChildren: true }
-        ];
-        
-        // Check for popular frameworks
-        const frameworks = ['jQuery', '$', 'React', 'Vue', 'Angular', 'angular'];
-        for (const framework of frameworks) {
-            try {
-                const result = await this.explorer.devToolsAPI.evaluateExpression(`typeof ${framework} !== 'undefined'`);
-                if (result && result.result === true) {
-                    rootNodes.push({
-                        name: framework,
-                        type: 'object',
-                        path: framework,
-                        hasChildren: true
-                    });
-                }
-            } catch (error) {
-                // Framework not available, continue
-            }
+        if (this.isLoadingRootNodes) {
+            return;
         }
+        this.isLoadingRootNodes = true;
         
-        this.renderTreeNodes(this.explorer.navigationTree, rootNodes);
+        try {
+            // Verify DevTools API availability
+            if (!this.explorer.devToolsAPI.isAvailable()) {
+                throw new Error('DevTools API not available');
+            }
+
+            this.explorer.navigationTree.innerHTML = '';
+            this.nodeCache.clear();
+            this.expandedNodes.clear();
+            
+            // Verify each root object exists before adding it
+            const rootNodes = [];
+            
+            const windowAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof window !== "undefined"');
+            if (windowAvailable) {
+                rootNodes.push({ name: 'window', type: 'object', path: 'window', hasChildren: true });
+            }
+            
+            const documentAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof document !== "undefined"');
+            if (documentAvailable) {
+                rootNodes.push({ name: 'document', type: 'object', path: 'document', hasChildren: true });
+            }
+            
+            const localStorageAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof localStorage !== "undefined"');
+            if (localStorageAvailable) {
+                rootNodes.push({ name: 'localStorage', type: 'object', path: 'localStorage', hasChildren: true });
+            }
+            
+            const sessionStorageAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof sessionStorage !== "undefined"');
+            if (sessionStorageAvailable) {
+                rootNodes.push({ name: 'sessionStorage', type: 'object', path: 'sessionStorage', hasChildren: true });
+            }
+            const consoleAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof console !== "undefined"');
+            if (consoleAvailable) {
+                rootNodes.push({ name: 'console', type: 'object', path: 'console', hasChildren: true });
+            }
+
+            const performanceAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof performance !== "undefined"');
+            if (performanceAvailable) {
+                rootNodes.push({ name: 'performance', type: 'object', path: 'performance', hasChildren: true });
+            }
+            const navigatorAvailable = await this.explorer.devToolsAPI.evaluateExpression('typeof navigator !== "undefined"');
+            if (navigatorAvailable) {
+                rootNodes.push({ name: 'navigator', type: 'object', path: 'navigator', hasChildren: true });
+            }
+
+            if (rootNodes.length === 0) {
+                throw new Error('No root objects available in the current context');
+            }
+            
+            // Check for popular frameworks
+            const frameworks = ['jQuery', '$', 'React', 'Vue', 'Angular', 'angular'];
+            for (const framework of frameworks) {
+                try {
+                    const result = await this.explorer.devToolsAPI.evaluateExpression(`typeof ${framework} !== 'undefined'`);
+                    if (result && result.result === true) {
+                        rootNodes.push({
+                            name: framework,
+                            type: 'object',
+                            path: framework,
+                            hasChildren: true
+                        });
+                    }
+                } catch (error) {
+                    // Framework not available, continue
+                }
+            }
+            
+            this.renderTreeNodes(this.explorer.navigationTree, rootNodes);
+        } catch (error) {
+            console.error('Failed to load root nodes:', error);
+            this.explorer.navigationTree.innerHTML = `
+                <div class="error-message" style="padding: 16px; text-align: center;">
+                    Failed to load root nodes: ${error.message}
+                    <br><br>
+                    Please ensure you are using this extension in a valid web page context.
+                </div>
+            `;
+            throw error; // Propagate the error to JavaScriptExplorer
+        } finally {
+            this.isLoadingRootNodes = false;
+        }
     }
     
     renderTreeNodes(container, nodes, level = 0) {
@@ -50,6 +120,12 @@ export class TreeNavigation {
     }
     
     createTreeNode(node, level) {
+        // Check cache first
+        const cacheKey = `${node.path}_${level}`;
+        if (this.nodeCache.has(cacheKey)) {
+            return this.nodeCache.get(cacheKey).cloneNode(true);
+        }
+        
         const nodeDiv = document.createElement('div');
         nodeDiv.className = 'tree-node';
         nodeDiv.style.paddingLeft = (level * 16) + 'px';
@@ -66,6 +142,11 @@ export class TreeNavigation {
         labelDiv.className = 'tree-label';
         labelDiv.textContent = node.name;
         
+        // Add tooltip with full path for long paths
+        if (node.path.length > 50) {
+            nodeDiv.title = node.path;
+        }
+        
         nodeDiv.appendChild(iconDiv);
         nodeDiv.appendChild(labelDiv);
         
@@ -80,6 +161,9 @@ export class TreeNavigation {
         nodeDiv.addEventListener('click', () => {
             this.selectNode(nodeDiv, node);
         });
+        
+        // Cache the node template
+        this.nodeCache.set(cacheKey, nodeDiv.cloneNode(true));
         
         return nodeDiv;
     }
@@ -112,35 +196,61 @@ export class TreeNavigation {
             if (existingChildren.classList.contains('expanded')) {
                 existingChildren.classList.remove('expanded');
                 icon.innerHTML = '▶';
+                this.expandedNodes.delete(node.path);
             } else {
                 existingChildren.classList.add('expanded');
                 icon.innerHTML = '▼';
+                this.expandedNodes.add(node.path);
             }
         } else {
             // Load children for the first time
             try {
+                const validation = PathUtils.validatePath(node.path);
+                if (!validation.isValid) {
+                    this.explorer.showError(`Cannot expand: ${validation.error}`);
+                    return;
+                }
+                
                 const children = await this.loadNodeChildren(node.path);
                 if (children.length > 0) {
                     const childrenContainer = document.createElement('div');
                     childrenContainer.className = 'tree-children expanded';
                     
-                    children.forEach(child => {
-                        const childNode = this.createTreeNode(child, this.getNodeLevel(nodeElement) + 1);
+                    // Limit children for performance
+                    const level = this.getNodeLevel(nodeElement);
+                    const maxChildren = level > 3 ? 50 : 100;
+                    const limitedChildren = children.slice(0, maxChildren);
+                    
+                    limitedChildren.forEach(child => {
+                        const childNode = this.createTreeNode(child, level + 1);
                         childrenContainer.appendChild(childNode);
                     });
                     
+                    // Show truncation message if needed
+                    if (children.length > maxChildren) {
+                        const truncatedNode = document.createElement('div');
+                        truncatedNode.className = 'tree-node truncated';
+                        truncatedNode.style.paddingLeft = `${(level + 1) * 16 + 20}px`;
+                        truncatedNode.textContent = `... ${children.length - maxChildren} more items`;
+                        truncatedNode.style.color = '#6a737d';
+                        truncatedNode.style.fontStyle = 'italic';
+                        childrenContainer.appendChild(truncatedNode);
+                    }
+                    
                     nodeElement.parentNode.insertBefore(childrenContainer, nodeElement.nextSibling);
                     icon.innerHTML = '▼';
+                    this.expandedNodes.add(node.path);
                 }
             } catch (error) {
-                this.explorer.showError('Failed to load children: ' + this.explorer.errorHandler.formatInspectorError(error));
+                this.explorer.showError(`Failed to load children for ${node.path}`);
             }
         }
     }
     
     getNodeLevel(nodeElement) {
+        if (!nodeElement || !nodeElement.style) return 0;
         const paddingLeft = parseInt(nodeElement.style.paddingLeft) || 0;
-        return paddingLeft / 16;
+        return Math.floor(paddingLeft / 16);
     }
     
     async loadNodeChildren(path) {
@@ -169,9 +279,7 @@ export class TreeNavigation {
                                 path: '${path}["' + key + '"]',
                                 hasChildren: hasChildren
                             });
-                        } catch (e) {
-                            // Property access failed, skip
-                        }
+                        } catch (e) {}
                     }
                     
                     // Get own property names (including non-enumerable)
@@ -192,13 +300,9 @@ export class TreeNavigation {
                                     path: '${path}["' + key + '"]',
                                     hasChildren: hasChildren
                                 });
-                            } catch (e) {
-                                // Property access failed, skip
-                            }
+                            } catch (e) {}
                         });
-                    } catch (e) {
-                        // getOwnPropertyNames failed, continue with what we have
-                    }
+                    } catch (e) {}
                     
                     return children.sort((a, b) => a.name.localeCompare(b.name));
                 })()
@@ -206,7 +310,6 @@ export class TreeNavigation {
             
             return result.result || [];
         } catch (error) {
-            console.error('Error loading node children:', error);
             return [];
         }
     }

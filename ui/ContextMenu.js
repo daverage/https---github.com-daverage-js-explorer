@@ -65,10 +65,10 @@ export class ContextMenu {
     
     async inspectInConsole(path) {
         try {
-            await this.explorer.devToolsAPI.evaluateExpression(`console.log(${path})`);
+            await this.explorer.devToolsAPI.evaluateExpression(`inspect(${path})`);
             this.explorer.showSuccess('Object logged to console');
         } catch (error) {
-            this.explorer.showError('Failed to log to console: ' + this.explorer.errorHandler.formatInspectorError(error));
+            throw error; // Re-throw the original error
         }
     }
     
@@ -77,7 +77,7 @@ export class ContextMenu {
             await this.copyToClipboard(path);
             this.explorer.showSuccess('Path copied to clipboard');
         } catch (error) {
-            this.explorer.showError('Failed to copy path: ' + error.message);
+            throw error; // Re-throw the original error
         }
     }
     
@@ -89,7 +89,7 @@ export class ContextMenu {
                 return;
             } catch (clipboardError) {
                 // Fall back to legacy method if Clipboard API fails
-                console.warn('Clipboard API failed, using fallback:', clipboardError.message);
+    
             }
         }
         
@@ -141,7 +141,7 @@ export class ContextMenu {
             await this.copyToClipboard(valueText);
             this.explorer.showSuccess('Value copied to clipboard');
         } catch (error) {
-            this.explorer.showError('Failed to copy value: ' + this.explorer.errorHandler.formatInspectorError(error));
+            throw error; // Re-throw the original error
         }
     }
     
@@ -149,7 +149,7 @@ export class ContextMenu {
         try {
             await this.explorer.navigateToPath(path);
         } catch (error) {
-            this.explorer.showError('Failed to view source: ' + this.explorer.errorHandler.formatInspectorError(error));
+            throw error; // Re-throw the original error
         }
     }
     
@@ -170,7 +170,7 @@ export class ContextMenu {
             `);
             this.explorer.showSuccess('Element highlighted');
         } catch (error) {
-            this.explorer.showError('Failed to highlight element: ' + this.explorer.errorHandler.formatInspectorError(error));
+            throw error; // Re-throw the original error
         }
     }
 }

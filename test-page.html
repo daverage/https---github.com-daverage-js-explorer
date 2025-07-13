@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Explorer Test Page</title>
+</head>
+<body>
+    <h1>JavaScript Explorer Test Page</h1>
+    <p>This is a test page for the JavaScript Explorer DevTools extension.</p>
+    <p>To test the extension:</p>
+    <ol>
+        <li>Open Chrome DevTools (F12)</li>
+        <li>Navigate to the "JS Explorer" tab</li>
+        <li>The extension should load and show the window object</li>
+    </ol>
+    
+    <script>
+        // Add some test objects to explore
+        window.testObject = {
+            name: 'Test Object',
+            number: 42,
+            array: [1, 2, 3, 'hello'],
+            nested: {
+                deep: {
+                    value: 'nested value'
+                }
+            },
+            func: function() {
+                return 'Hello from function!';
+            }
+        };
+        
+        window.testArray = ['apple', 'banana', 'cherry'];
+        
+        console.log('Test page loaded. Objects available:', {
+            testObject: window.testObject,
+            testArray: window.testArray
+        });
+    </script>
+</body>
+</html>

@@ -1,32 +1,32 @@
 /**
  * Global Search Module
- * Handles global search functionality across JavaScript objects
+ * Handles searching across JavaScript objects with various scopes and filters
+ * Enhanced with optimized property preview generation and better performance
  */
+
+import { PropertyPreviewUtils } from '../utils/PropertyPreviewUtils.js';
+import { PathUtils } from '../utils/PathUtils.js';
+
 
 export class GlobalSearch {
     constructor(explorer) {
         this.explorer = explorer;
     }
     
-    async performSearch() {
-        const query = this.explorer.globalSearchInput.value.trim();
-        const scope = this.explorer.searchScope.value;
-        
-        if (!query) {
-            this.explorer.showError('Enter a search query');
-            return;
+    performSearch(query, scope = 'global') {
+        if (this.explorer && this.explorer.contentTitle) {
+            this.explorer.contentTitle.textContent = 'Search Results';
         }
+        if (this.explorer && this.explorer.contentContainer) {
+             this.explorer.contentContainer.innerHTML = '<div class="loading-message">Searching...</div>';
+         }
         
-        // Show loading in right panel
-        this.explorer.contentView.innerHTML = '<div class="loading-message">Searching...</div>';
-        this.explorer.contentTitle.textContent = `Search Results for "${query}"`;
-        
-        try {
-            const results = await this.executeGlobalSearch(query, scope);
-            this.displaySearchResults(results, query, scope);
-        } catch (error) {
-            this.explorer.showError('Search failed: ' + this.explorer.errorHandler.formatInspectorError(error));
-        }
+        // Use setTimeout to allow UI to update
+        setTimeout(() => {
+            // First validate the query
+            this.parseSearchQuery(query);
+            this.executeGlobalSearch(query, scope);
+        }, 10);
     }
     
     async executeGlobalSearch(query, scope, maxDepth = 99) {
@@ -94,23 +94,12 @@ export class GlobalSearch {
                                 const fullPath = path + '[' + JSON.stringify(key) + ']';
                                 
                                 if (matchesQuery(key, value, type, ${JSON.stringify(searchTerms)})) {
-                                    let preview = '';
-                                    if (value === null) preview = 'null';
-                                    else if (value === undefined) preview = 'undefined';
-                                    else if (type === 'string') preview = '"' + (value.length > 50 ? value.substring(0, 50) + '...' : value) + '"';
-                                    else if (type === 'number' || type === 'boolean') preview = String(value);
-                                    else if (type === 'function') preview = 'ƒ ' + (value.name || 'anonymous');
-                                    else if (type === 'object') {
-                                        if (Array.isArray(value)) preview = '[Array(' + value.length + ')]';
-                                        else if (value.constructor) preview = '[' + value.constructor.name + ']';
-                                        else preview = '[Object]';
-                                    }
-                                    
                                     results.push({
                                         name: key,
                                         path: fullPath,
                                         type: type,
-                                        value: preview
+                                        value: value, // Store actual value
+                                        preview: PropertyPreviewUtils.generatePreview(value) // Generate preview using utility
                                     });
                                 }
                                 
@@ -118,11 +107,11 @@ export class GlobalSearch {
                                     searchObject(value, fullPath, maxDepth, currentDepth + 1);
                                 }
                             } catch (e) {
-                                // Skip inaccessible properties
+                                throw e; // Propagate property access errors
                             }
                         }
                     } catch (e) {
-                        // Skip if object enumeration fails
+                        throw e; // Propagate enumeration errors
                     }
                 }
                 
@@ -135,7 +124,23 @@ export class GlobalSearch {
                 } else {
                     // Current object scope
                     try {
-                        const currentObj = eval(${JSON.stringify(currentPath)});
+                        // Replace eval with safe property traversal
+                        function getObjectByPath(root, path) {
+                            if (!path || path === 'window') return root;
+                            var parts = path.replace(/^window\.?/, '').split(/\.|\[(?:'|")?|(?:'|")?\]/).filter(Boolean);
+                            var obj = root;
+                            for (var i = 0; i < parts.length; i++) {
+                                if (obj == null) return undefined;
+                                var key = parts[i];
+                                if (key in obj) {
+                                    obj = obj[key];
+                                } else {
+                                    return undefined;
+                                }
+                            }
+                            return obj;
+                        }
+                        const currentObj = getObjectByPath(window, ${JSON.stringify(currentPath)});
                         searchObject(currentObj, ${JSON.stringify(currentPath)});
                     } catch (e) {
                         // Fallback to window if current path evaluation fails
@@ -161,45 +166,55 @@ export class GlobalSearch {
         `;
         
         const result = await this.explorer.devToolsAPI.evaluateExpression(searchCode);
-        return result.result || [];
+        const searchResults = result.result || [];
+
+        // Format search results for ContentRenderer
+        const formattedResults = searchResults.map(item => ({
+            name: item.name,
+            path: item.path,
+            type: item.type,
+            value: item.preview, // Use the generated preview for display
+            actualValue: item.value, // Keep actual value for expandability check
+            isExpandable: PropertyPreviewUtils.isExpandable(item.value) 
+        }));
+
+        // Display results using ContentRenderer
+        if (this.explorer && this.explorer.contentContainer) {
+            this.explorer.contentContainer.innerHTML = ''; // Clear loading message
+            if (formattedResults.length > 0) {
+                const table = this.explorer.contentRenderer.createPropertiesTable(formattedResults);
+                this.explorer.contentContainer.appendChild(table);
+            } else {
+                this.explorer.contentContainer.innerHTML = '<div class="loading-message">No results found.</div>';
+            }
+        }
+
+        return formattedResults; // Return formatted results
     }
     
     parseSearchQuery(query) {
-        if (!query || typeof query !== 'string') {
-            return [];
+        if (!query || typeof query !== 'string' || query.trim() === '') {
+            throw new Error('Search query must be a non-empty string');
         }
         
-        const terms = [];
-        const parts = query.split(/\s+(AND|OR)\s+/i);
+        // Relax validation: allow brackets but still block control chars and comments
+        const dangerousPatterns = [
+            /[\x00-\x1F\x7F]/, // Control characters
+            /\/\*.*\*\//, // Block comments
+            /\/\/.*\n/, // Line comments
+            /['"`]\s*\+/ // String concatenation
+        ];
         
-        for (let i = 0; i < parts.length; i += 2) {
-            const term = parts[i] ? parts[i].trim() : '';
-            if (!term) continue;
-            
-            const operator = parts[i + 1];
-            
-            if (operator && (operator.toUpperCase() === 'AND' || operator.toUpperCase() === 'OR')) {
-                const nextTerm = parts[i + 2] ? parts[i + 2].trim() : '';
-                if (nextTerm) {
-                    terms.push({
-                        operator: operator.toUpperCase(),
-                        patterns: [term.toLowerCase(), nextTerm.toLowerCase()]
-                    });
-                    i++; // Skip the next term as it's already processed
-                } else {
-                    // If no next term, treat as regular pattern
-                    terms.push({
-                        pattern: term.toLowerCase()
-                    });
-                }
-            } else {
-                terms.push({
-                    pattern: term.toLowerCase()
-                });
+        for (const pattern of dangerousPatterns) {
+            if (pattern.test(query)) {
+                throw new Error('Search query contains invalid characters');
             }
         }
         
-        return terms.filter(term => term.pattern || (term.patterns && term.patterns.length > 0));
+        // Simplify: split by whitespace only, no AND/OR or brackets
+        const parts = query.trim().toLowerCase().split(/\s+/);
+        
+        return parts.map(pattern => ({ pattern }));
     }
     
     displaySearchResults(results, query, scope) {

@@ -1,11 +1,16 @@
 {
   "manifest_version": 3,
   "name": "JavaScript Explorer",
-  "version": "1.0.1",
+  "version": "0.6",
   "description": "A Chrome Extension for Developer Tools that provides a Windows Explorer-like interface for navigating JavaScript objects and DOM elements.",
   "devtools_page": "devtools.html",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "icons": {
     "16": "icons/icon16.png",
